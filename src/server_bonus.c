@@ -1,22 +1,23 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   server.c                                           :+:      :+:    :+:   */
+/*   server_bonus.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: aoneil <aoneil@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/03 11:45:00 by aoneil            #+#    #+#             */
-/*   Updated: 2025/12/10 01:14:12 by aoneil           ###   ########.fr       */
+/*   Created: 2025/12/10 00:16:39 by aoneil            #+#    #+#             */
+/*   Updated: 2025/12/10 01:20:13 by aoneil           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/minitalk.h"
+#include "../include/minitalk_bonus.h"
 
-void	handler(int signum)
+void	handler(int signum, siginfo_t *info, void *context)
 {
 	static unsigned char	c;
 	static int				bit_index;
 
+	(void)context;
 	c <<= 1;
 	if (signum == SIGUSR1)
 		c |= 1;
@@ -30,14 +31,15 @@ void	handler(int signum)
 		c = 0;
 		bit_index = 0;
 	}
+	kill(info->si_pid, SIGUSR1);
 }
 
 int	main(void)
 {
 	struct sigaction	sa;
 
-	sa.sa_handler = handler;
-	sa.sa_flags = SA_RESTART;
+	sa.sa_sigaction = handler;
+	sa.sa_flags = SA_SIGINFO | SA_RESTART;
 	sigemptyset(&sa.sa_mask);
 	sigaddset(&sa.sa_mask, SIGUSR1);
 	sigaddset(&sa.sa_mask, SIGUSR2);

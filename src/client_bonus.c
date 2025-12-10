@@ -1,16 +1,18 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   client.c                                           :+:      :+:    :+:   */
+/*   client_bonus.c                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: aoneil <aoneil@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/03 11:44:56 by aoneil            #+#    #+#             */
-/*   Updated: 2025/12/10 01:33:48 by aoneil           ###   ########.fr       */
+/*   Created: 2025/12/10 00:12:49 by aoneil            #+#    #+#             */
+/*   Updated: 2025/12/10 01:36:10 by aoneil           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/minitalk.h"
+#include "../include/minitalk_bonus.h"
+
+volatile int	g_received;
 
 static int	ft_isdigit_str(char *s)
 {
@@ -26,38 +28,46 @@ static int	ft_isdigit_str(char *s)
 	return (1);
 }
 
-static void	send_char(pid_t pid, unsigned char c, int delay)
+static void	client_handler(int signum)
+{
+	(void)signum;
+	g_received = 1;
+}
+
+static void	send_char(pid_t pid, unsigned char c)
 {
 	int	bit_index;
 
 	bit_index = 7;
 	while (bit_index >= 0)
 	{
+		g_received = 0;
 		if (c & (1 << bit_index))
 			kill(pid, SIGUSR1);
 		else
 			kill(pid, SIGUSR2);
-		usleep(delay);
+		while (!g_received)
+			pause();
 		bit_index--;
 	}
 }
 
-static void	client_talk(pid_t pid, char *message, int delay)
+static void	client_talk(pid_t pid, char *message)
 {
 	int					i;
 
 	i = 0;
 	while (message[i])
 	{
-		send_char(pid, message[i], delay);
+		send_char(pid, message[i]);
 		i++;
 	}
-	send_char(pid, '\0', delay);
+	send_char(pid, '\0');
 }
 
 int	main(int ac, char **av)
 {
-	int		delay;
+	pid_t	pid;
 
 	if (ac != 3 || !av[2])
 	{
@@ -69,12 +79,13 @@ int	main(int ac, char **av)
 		ft_putstr_fd("Wrong PID\n", 1);
 		return (1);
 	}
-	if (kill(ft_atoi(av[1]), 0) == -1)
+	pid = ft_atoi(av[1]);
+	if (kill(pid, 0) == -1)
 	{
 		ft_putstr_fd("Process not found\n", 1);
 		return (1);
 	}
-	delay = 800;
-	client_talk(ft_atoi(av[1]), av[2], delay);
+	signal(SIGUSR1, client_handler);
+	client_talk(pid, av[2]);
 	return (0);
 }
